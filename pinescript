@@ -1,0 +1,1142 @@
+//@version=6
+indicator("Flower of Life", overlay=true, max_bars_back = 1000, max_labels_count = 500, max_lines_count = 500, max_polylines_count = 100)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 1. User inputs 
+enableTable = input.bool(true, title = "Enable Table", group = "Info Table")
+priceLockRatio = input.float(defval = 100, step = 0.1, title = "Price Lock Ratio", group = "Price Lock Ratio")
+
+// Dates
+trendlineFromDate = input.time(timestamp("2025-01-24T00:00:00"), title = "From Date", group = "Date Range")  
+trendlineToDate = input.time(timestamp("2025-01-24T06:00:00"), title = "To Date", group = "Date Range")
+
+// Flower of Life - Petals Dividers
+enablePetalDividersTop = input.bool(false, title = "", inline = "Enable Petal Dividers - Top", group = "Flower of Life - Petals Dividers")
+enablePetalDividersLeft = input.bool(false, title = "", inline = "Enable Petal Dividers - Left", group = "Flower of Life - Petals Dividers")
+enablePetalDividersRight = input.bool(false, title = "", inline = "Enable Petal Dividers - Right", group = "Flower of Life - Petals Dividers")
+petalDividersColorTop = input.color(defval = color.white, title = "Top Petal Dividers", inline = "Enable Petal Dividers - Top", group = "Flower of Life - Petals Dividers")
+petalDividersColorLeft = input.color(defval = color.white, title = "Left Petal Dividers", inline = "Enable Petal Dividers - Left", group = "Flower of Life - Petals Dividers")
+petalDividersColorRight = input.color(defval = color.white, title = "Right Petal Dividers", inline = "Enable Petal Dividers - Right", group = "Flower of Life - Petals Dividers")
+
+// Flower of Life - Nether Dividers
+enableNetherDividersTop = input.bool(true, title = "Top Dividers", inline = "netherTop", group = "Flower of Life - Nether Dividers")
+enableNetherDividersLeft = input.bool(true, title = "Left Dividers", inline = "netherLeft", group = "Flower of Life - Nether Dividers")
+enableNetherDividersRight = input.bool(true, title = "Right Dividers", inline = "netherRight", group = "Flower of Life - Nether Dividers")
+netherDividersColorTop = input.color(defval = color.white, title = "", inline = "netherTop", group = "Flower of Life - Nether Dividers")
+netherDividersColorLeft = input.color(defval = color.white, title = "", inline = "netherLeft", group = "Flower of Life - Nether Dividers")
+netherDividersColorRight = input.color(defval = color.white, title = "", inline = "netherRight", group = "Flower of Life - Nether Dividers")
+
+// Flower of Life - Nether Price Finder - Top Lines
+enableNetherTopPriceFinder = input.bool(true, title = "Top Line", inline = "Nether Price Finder - Top", group = "Nether Price Finder - Top")
+netherTopInput = input.int(defval = 1, title = "", minval=1, maxval=19, inline = "Nether Price Finder - Top", group = "Nether Price Finder - Top")
+enableNetherTopDebugLine = input.bool(true, title = "Debug Line", inline = "Nether Price Finder - Top, Debug", group = "Nether Price Finder - Top")    
+netherTopColor = input.color(defval = color.red, title = "", inline = "Nether Price Finder - Top, Debug", group = "Nether Price Finder - Top")
+netherTopDebugWidth = input.int(defval = 1, title = "", inline = "Nether Price Finder - Top, Debug", group = "Nether Price Finder - Top")
+
+// Flower of Life - Nether Price Finder - Left Lines
+enableNetherLeftPriceFinder = input.bool(true, title = "Left Line", inline = "Nether Price Finder - Left", group = "Nether Price Finder - Left")
+netherLeftInput = input.int(defval = 1, title = "", minval=1, maxval=15, inline = "Nether Price Finder - Left", group = "Nether Price Finder - Left")
+enableNetherLeftDebugLine = input.bool(true, title = "Debug Line", inline = "Nether Price Finder - Left, Debug", group = "Nether Price Finder - Left")
+netherLeftColor = input.color(defval = color.green, title = "", inline = "Nether Price Finder - Left, Debug", group = "Nether Price Finder - Left")
+netherLeftDebugWidth = input.int(defval = 1, title = "", inline = "Nether Price Finder - Left, Debug", group = "Nether Price Finder - Left")
+
+// Flower of Life - Nether Price Finder - Right Lines
+enableNetherRightPriceFinder = input.bool(true, title = "Right Line", inline = "Nethe Price Finderr - Right", group = "Nether Price Finder - Right")
+netherRightInput = input.int(defval = 1, title = "", minval=1, maxval=15, inline = "Nethe Price Finderr - Right", group = "Nether Price Finder - Right")
+enableNetherRightDebugLine = input.bool(true, title = "Debug Line", inline = "Nether Price Finder - Right, Debug", group = "Nether Price Finder - Right")
+netherRightColor = input.color(defval = color.blue, title = "", inline = "Nether Price Finder - Right, Debug", group = "Nether Price Finder - Right")
+netherRightDebugWidth = input.int(defval = 1, title = "", inline = "Nether Price Finder - Right, Debug", group = "Nether Price Finder - Right")
+
+// Flower of Life - Petal Price Finder - Top Lines
+enablePetalTopPriceFinder = input.bool(true, title = "Top Line", inline = "Petal Price Finder - Top", group = "Petal Price Finder - Top")
+petalTopInput = input.int(defval = 1, minval=1, maxval=7, title = "", inline = "Petal Price Finder - Top", group = "Petal Price Finder - Top")
+enablePetalTopDebugLine = input.bool(true, title = "Debug Line", inline = "Petal Price Finder - Top, Debug", group = "Petal Price Finder - Top")    
+petalTopColor = input.color(defval = color.red, title = "", inline = "Petal Price Finder - Top, Debug", group = "Petal Price Finder - Top")
+petalTopDebugWidth = input.int(defval = 1, title = "", inline = "Petal Price Finder - Top, Debug", group = "Petal Price Finder - Top")
+
+// Flower of Life - Petal Price Finder - Left Lines
+enablePetalLeftPriceFinder = input.bool(true, title = "Left Line", inline = "Petal Price Finder - Left", group = "Petal Price Finder - Left")
+petalLeftInput = input.int(defval = 1, minval=1, maxval=7, title = "", inline = "Petal Price Finder - Left", group = "Petal Price Finder - Left")
+enablePetalLeftDebugLine = input.bool(true, title = "Debug Line", inline = "Petal Price Finder - Left, Debug", group = "Petal Price Finder - Left")    
+petalLeftColor = input.color(defval = color.red, title = "", inline = "Petal Price Finder - Left, Debug", group = "Petal Price Finder - Left")
+petalLeftDebugWidth = input.int(defval = 1, title = "", inline = "Petal Price Finder - Left, Debug", group = "Petal Price Finder - Left")
+
+// Flower of Life - Petal Price Finder - Right Lines
+enablePetalRightPriceFinder = input.bool(true, title = "Right Line", inline = "Petal Price Finder - Right", group = "Petal Price Finder - Right")
+petalRightInput = input.int(defval = 1, minval=1, maxval=7, title = "", inline = "Petal Price Finder - Right", group = "Petal Price Finder - Right")
+enablePetalRightDebugLine = input.bool(true, title = "Debug Line", inline = "Petal Price Finder - Right, Debug", group = "Petal Price Finder - Right")    
+petalRightColor = input.color(defval = color.red, title = "", inline = "Petal Price Finder - Right, Debug", group = "Petal Price Finder - Right")
+petalRightDebugWidth = input.int(defval = 1, title = "", inline = "Petal Price Finder - Right, Debug", group = "Petal Price Finder - Right")
+
+// Circle Price Finder - 1
+enableVerticalLine = input.bool(true, title = "", inline = "verticalLine", group = "Circles Price Finder")
+verticalLineColor = input.color(defval = color.blue, title = "", inline = "verticalLine", group = "Circles Price Finder")
+verticalLineWidth = input.int(defval = 1, title = "Width", inline = "verticalLine", group = "Circles Price Finder")
+
+enableCircle1PriceFinder = input.bool(true, title = "", inline = "circle1pricefinder", group = "Circles Price Finder")
+circle1Input = input.int(defval = 1, minval=1, maxval=61, title = "Circle 1", inline = "circle1pricefinder", group = "Circles Price Finder")
+circle1Color = input.color(defval = color.red, title = "", inline = "circle1pricefinder", group = "Circles Price Finder")
+circle1Width = input.int(defval = 1, title = "Width", inline = "circle1pricefinder", group = "Circles Price Finder")
+
+// Circle Price Finder - 2
+enableCircle2PriceFinder = input.bool(true, title = "", inline = "circle2pricefinder", group = "Circles Price Finder")
+circle2Input = input.int(defval = 1, minval=1, maxval=61, title = "Circle 2", inline = "circle2pricefinder", group = "Circles Price Finder")
+circle2Color = input.color(defval = color.red, title = "", inline = "circle2pricefinder", group = "Circles Price Finder")
+circle2Width = input.int(defval = 1, title = "Width", inline = "circle2pricefinder", group = "Circles Price Finder")
+
+// Circle Price Finder - 3
+enableCircle3PriceFinder = input.bool(true, title = "", inline = "circle3pricefinder", group = "Circles Price Finder")
+circle3Input = input.int(defval = 1, minval=1, maxval=61, title = "Circle 3", inline = "circle2pricefinder", group = "Circles Price Finder")
+circle3Color = input.color(defval = color.red, title = "", inline = "circle3pricefinder", group = "Circles Price Finder")
+circle3Width = input.int(defval = 1, title = "Width", inline = "circle3pricefinder", group = "Circles Price Finder")
+
+// Flower of Life - Circle Settings
+numberOfCirclePoints = input.int(defval = 121, title = "Number of Circle Points", group = "Flower of Life - Circle Settings")
+numberOfAngles = input.int(defval = 120, title = "Number of Angles", group = "Flower of Life - Circle Settings")
+angleIncrement = input.int(defval = 3, title = "Angle Increment", group = "Flower of Life - Circle Settings")
+circleBorderColor = input.color(defval = color.white, title = "Circle Border Color", inline = "Border Color", group = "Flower of Life - Circle Settings")
+
+// Flower of Life - Midpoint Labels
+enableMidPointsD1 = input.bool(true, title = "D1", inline = "Mid Points", group = "Flower of Life - Midpoint Labels")
+enableMidPointsD2 = input.bool(true, title = "D2", inline = "Mid Points", group = "Flower of Life - Midpoint Labels")
+enableMidPointsD3 = input.bool(true, title = "D3", inline = "Mid Points", group = "Flower of Life - Midpoint Labels")
+enableMidPointsD4 = input.bool(false, title = "D4", inline = "Mid Points", group = "Flower of Life - Midpoint Labels")
+enableMidPointsD5 = input.bool(false, title = "D5", inline = "Mid Points", group = "Flower of Life - Midpoint Labels")
+
+// Flower of Life - Circles
+enableFirstCircle = input.bool(true, title = "Enable First Circle", inline = "firstCircle", group = "Flower of Life")
+enableSecondCircle = input.bool(true, title = "Enable Second Circle", inline = "secondCircle", group = "Flower of Life")
+enableThirdCircle = input.bool(true, title = "Enable Third Circle", inline = "thirdCircle", group = "Flower of Life")
+enableFourthCircle = input.bool(true, title = "Enable Fourth Circle", inline = "fourthCircle", group = "Flower of Life")
+enableFifthCircle = input.bool(true, title = "Enable Fifth Circle", inline = "fifthCircle", group = "Flower of Life")
+enableSixthCircle = input.bool(true, title = "Enable Sixth Circle", inline = "sixthCircle", group = "Flower of Life")
+enableSeventhCircle = input.bool(true, title = "Enable Seventh Circle", inline = "seventhCircle", group = "Flower of Life")
+enableEighthCircle = input.bool(true, title = "Enable Eighth Circle", inline = "eighthCircle", group = "Flower of Life")
+enableNinthCircle = input.bool(true, title = "Enable Ninth Circle", inline = "ninthCircle", group = "Flower of Life")
+enableTenthCircle = input.bool(true, title = "Enable Tenth Circle", inline = "tenthCircle", group = "Flower of Life")
+enableEleventhCircle = input.bool(true, title = "Enable Eleventh Circle", inline = "eleventhCircle", group = "Flower of Life")
+enableTwelfthCircle = input.bool(true, title = "Enable Twelfth Circle", inline = "twelfthCircle", group = "Flower of Life")
+enableThirteenthCircle = input.bool(true, title = "Enable Thirteenth Circle", inline = "thirteenthCircle", group = "Flower of Life")
+enableFourteenthCircle = input.bool(true, title = "Enable Fourteenth Circle", inline = "fourteenthCircle", group = "Flower of Life")
+enableFifteenthCircle = input.bool(true, title = "Enable Fifteenth Circle", inline = "fifteenthCircle", group = "Flower of Life")
+enableSixteenthCircle = input.bool(true, title = "Enable Sixteenth Circle", inline = "sixteenthCircle", group = "Flower of Life")
+enableSeventeenthCircle = input.bool(true, title = "Enable Seventeenth Circle", inline = "seventeenthCircle", group = "Flower of Life")
+enableEighteenthCircle = input.bool(true, title = "Enable Eighteenth Circle", inline = "eighteenthCircle", group = "Flower of Life")
+enableNineteenthCircle = input.bool(true, title = "Enable Nineteenth Circle", inline = "nineteenthCircle", group = "Flower of Life")
+enableTwentiethCircle = input.bool(true, title = "Enable Twentieth Circle", inline = "twentiethCircle", group = "Flower of Life")
+enableTwentyFirstCircle = input.bool(true, title = "Enable Twenty-First Circle", inline = "twentyFirstCircle", group = "Flower of Life")
+enableTwentySecondCircle = input.bool(true, title = "Enable Twenty-Second Circle", inline = "twentySecondCircle", group = "Flower of Life")
+enableTwentyThirdCircle = input.bool(true, title = "Enable Twenty-Third Circle", inline = "twentyThirdCircle", group = "Flower of Life")
+enableTwentyFourthCircle = input.bool(true, title = "Enable Twenty-Fourth Circle", inline = "twentyFourthCircle", group = "Flower of Life")
+enableTwentyFifthCircle = input.bool(true, title = "Enable Twenty-Fifth Circle", inline = "twentyFifthCircle", group = "Flower of Life")
+enableTwentySixthCircle = input.bool(true, title = "Enable Twenty-Sixth Circle", inline = "twentySixthCircle", group = "Flower of Life")
+enableTwentySeventhCircle = input.bool(true, title = "Enable Twenty-Seventh Circle", inline = "twentySeventhCircle", group = "Flower of Life")
+enableTwentyEighthCircle = input.bool(true, title = "Enable Twenty-Eighth Circle", inline = "twentyEighthCircle", group = "Flower of Life")
+enableTwentyNinthCircle = input.bool(true, title = "Enable Twenty-Ninth Circle", inline = "twentyNinthCircle", group = "Flower of Life")
+enableThirtiethCircle = input.bool(true, title = "Enable Thirtieth Circle", inline = "thirtiethCircle", group = "Flower of Life")
+enableThirtyFirstCircle = input.bool(true, title = "Enable Thirty-First Circle", inline = "thirtyFirstCircle", group = "Flower of Life")
+enableThirtySecondCircle = input.bool(true, title = "Enable Thirty-Second Circle", inline = "thirtySecondCircle", group = "Flower of Life")
+enableThirtyThirdCircle = input.bool(true, title = "Enable Thirty-Third Circle", inline = "thirtyThirdCircle", group = "Flower of Life")
+enableThirtyFourthCircle = input.bool(true, title = "Enable Thirty-Fourth Circle", inline = "thirtyFourthCircle", group = "Flower of Life")
+enableThirtyFifthCircle = input.bool(true, title = "Enable Thirty-Fifth Circle", inline = "thirtyFifthCircle", group = "Flower of Life")
+enableThirtySixthCircle = input.bool(true, title = "Enable Thirty-Sixth Circle", inline = "thirtySixthCircle", group = "Flower of Life")
+enableThirtySeventhCircle = input.bool(true, title = "Enable Thirty-Seventh Circle", inline = "thirtySeventhCircle", group = "Flower of Life")
+enableThirtyEighthCircle = input.bool(false, title = "Enable Thirty-Eighth Circle", inline = "thirtyEighthCircle", group = "Flower of Life")
+enableThirtyNinthCircle = input.bool(false, title = "Enable Thirty-Ninth Circle", inline = "thirtyNinthCircle", group = "Flower of Life")
+enableFortiethCircle = input.bool(false, title = "Enable Fortieth Circle", inline = "fortiethCircle", group = "Flower of Life")
+enableFortyFirstCircle = input.bool(false, title = "Enable Forty-First Circle", inline = "fortyFirstCircle", group = "Flower of Life")
+enableFortySecondCircle = input.bool(false, title = "Enable Forty-Second Circle", inline = "fortySecondCircle", group = "Flower of Life")
+enableFortyThirdCircle = input.bool(false, title = "Enable Forty-Third Circle", inline = "fortyThirdCircle", group = "Flower of Life")
+enableFortyFourthCircle = input.bool(false, title = "Enable Forty-Fourth Circle", inline = "fortyFourthCircle", group = "Flower of Life")
+enableFortyFifthCircle = input.bool(false, title = "Enable Forty-Fifth Circle", inline = "fortyFifthCircle", group = "Flower of Life")
+enableFortySixthCircle = input.bool(false, title = "Enable Forty-Sixth Circle", inline = "fortySixthCircle", group = "Flower of Life")
+enableFortySeventhCircle = input.bool(false, title = "Enable Forty-Seventh Circle", inline = "fortySeventhCircle", group = "Flower of Life")
+enableFortyEighthCircle = input.bool(false, title = "Enable Forty-Eighth Circle", inline = "fortyEighthCircle", group = "Flower of Life")
+enableFortyNinthCircle = input.bool(false, title = "Enable Forty-Ninth Circle", inline = "fortyNinthCircle", group = "Flower of Life")
+enableFiftiethCircle = input.bool(false, title = "Enable Fiftieth Circle", inline = "fiftiethCircle", group = "Flower of Life")
+enableFiftyFirstCircle = input.bool(false, title = "Enable Fifty-First Circle", inline = "fiftyFirstCircle", group = "Flower of Life")
+enableFiftySecondCircle = input.bool(false, title = "Enable Fifty-Second Circle", inline = "fiftySecondCircle", group = "Flower of Life")
+enableFiftyThirdCircle = input.bool(false, title = "Enable Fifty-Third Circle", inline = "fiftyThirdCircle", group = "Flower of Life")
+enableFiftyFourthCircle = input.bool(false, title = "Enable Fifty-Fourth Circle", inline = "fiftyFourthCircle", group = "Flower of Life")
+enableFiftyFifthCircle = input.bool(false, title = "Enable Fifty-Fifth Circle", inline = "fiftyFifthCircle", group = "Flower of Life")
+enableFiftySixthCircle = input.bool(false, title = "Enable Fifty-Sixth Circle", inline = "fiftySixthCircle", group = "Flower of Life")
+enableFiftySeventhCircle = input.bool(false, title = "Enable Fifty-Seventh Circle", inline = "fiftySeventhCircle", group = "Flower of Life")
+enableFiftyEighthCircle = input.bool(false, title = "Enable Fifty-Eighth Circle", inline = "fiftyEighthCircle", group = "Flower of Life")
+enableFiftyNinthCircle = input.bool(false, title = "Enable Fifty-Ninth Circle", inline = "fiftyNinthCircle", group = "Flower of Life")
+enableSixtiethCircle = input.bool(false, title = "Enable Sixtieth Circle", inline = "sixtiethCircle", group = "Flower of Life")
+enableSixtyFirstCircle = input.bool(false, title = "Enable Sixty-First Circle", inline = "sixtyFirstCircle", group = "Flower of Life")
+
+colorFirstCircleFill = input.color(defval = color.rgb(255, 255, 0, 85), title = "", inline = "firstCircle", group = "Flower of Life")
+colorSecondCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "secondCircle", group = "Flower of Life")
+colorThirdCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "thirdCircle", group = "Flower of Life")
+colorFourthCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "fourthCircle", group = "Flower of Life")
+colorFifthCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "fifthCircle", group = "Flower of Life")
+colorSixthCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "sixthCircle", group = "Flower of Life")
+colorSeventhCircleFill = input.color(defval = color.rgb(76, 175, 165, 90), title = "", inline = "seventhCircle", group = "Flower of Life")
+colorEighthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "eighthCircle", group = "Flower of Life")
+colorNinthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "ninthCircle", group = "Flower of Life")
+colorTenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "tenthCircle", group = "Flower of Life")
+colorEleventhCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "eleventhCircle", group = "Flower of Life")
+colorTwelfthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "twelfthCircle", group = "Flower of Life")
+colorThirteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "thirteenthCircle", group = "Flower of Life")
+colorFourteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "fourteenthCircle", group = "Flower of Life")
+colorFifteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "fifteenthCircle", group = "Flower of Life")
+colorSixteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "sixteenthCircle", group = "Flower of Life")
+colorSeventeenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "seventeenthCircle", group = "Flower of Life")
+colorEighteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "eighteenthCircle", group = "Flower of Life")
+colorNineteenthCircleFill = input.color(defval = color.rgb(52, 151, 252, 90), title = "", inline = "nineteenthCircle", group = "Flower of Life")
+colorTwentiethCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentiethCircle", group = "Flower of Life")
+colorTwentyFirstCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyFirstCircle", group = "Flower of Life")
+colorTwentySecondCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentySecondCircle", group = "Flower of Life")
+colorTwentyThirdCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyThirdCircle", group = "Flower of Life")
+colorTwentyFourthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyFourthCircle", group = "Flower of Life")
+colorTwentyFifthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyFifthCircle", group = "Flower of Life")
+colorTwentySixthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentySixthCircle", group = "Flower of Life")
+colorTwentySeventhCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentySeventhCircle", group = "Flower of Life")
+colorTwentyEighthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyEighthCircle", group = "Flower of Life")
+colorTwentyNinthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "twentyNinthCircle", group = "Flower of Life")
+colorThirtiethCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtiethCircle", group = "Flower of Life")
+colorThirtyFirstCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtyFirstCircle", group = "Flower of Life")
+colorThirtySecondCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtySecondCircle", group = "Flower of Life")
+colorThirtyThirdCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtyThirdCircle", group = "Flower of Life")
+colorThirtyFourthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtyFourthCircle", group = "Flower of Life")
+colorThirtyFifthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtyFifthCircle", group = "Flower of Life")
+colorThirtySixthCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtySixthCircle", group = "Flower of Life")
+colorThirtySeventhCircleFill = input.color(defval = color.rgb(62, 74, 238, 90), title = "", inline = "thirtySeventhCircle", group = "Flower of Life")
+colorThirtyEighthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "thirtyEighthCircle", group = "Flower of Life")
+colorThirtyNinthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "thirtyNinthCircle", group = "Flower of Life")
+colorFortiethCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortiethCircle", group = "Flower of Life")
+colorFortyFirstCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyFirstCircle", group = "Flower of Life")
+colorFortySecondCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortySecondCircle", group = "Flower of Life")
+colorFortyThirdCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyThirdCircle", group = "Flower of Life")
+colorFortyFourthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyFourthCircle", group = "Flower of Life")
+colorFortyFifthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyFifthCircle", group = "Flower of Life")
+colorFortySixthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortySixthCircle", group = "Flower of Life")
+colorFortySeventhCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortySeventhCircle", group = "Flower of Life")
+colorFortyEighthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyEighthCircle", group = "Flower of Life")
+colorFortyNinthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fortyNinthCircle", group = "Flower of Life")
+colorFiftiethCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftiethCircle", group = "Flower of Life")
+colorFiftyFirstCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyFirstCircle", group = "Flower of Life")
+colorFiftySecondCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftySecondCircle", group = "Flower of Life")
+colorFiftyThirdCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyThirdCircle", group = "Flower of Life")
+colorFiftyFourthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyFourthCircle", group = "Flower of Life")
+colorFiftyFifthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyFifthCircle", group = "Flower of Life")
+colorFiftySixthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftySixthCircle", group = "Flower of Life")
+colorFiftySeventhCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftySeventhCircle", group = "Flower of Life")
+colorFiftyEighthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyEighthCircle", group = "Flower of Life")
+colorFiftyNinthCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "fiftyNinthCircle", group = "Flower of Life")
+colorSixtiethCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "sixtiethCircle", group = "Flower of Life")
+colorSixtyFirstCircleFill = input.color(defval = color.rgb(96, 79, 200, 90), title = "", inline = "sixtyFirstCircle", group = "Flower of Life")
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 2. On each bar, if it's within the chosen date range, update min and max information
+var float inversePriceLockRatio = 1/priceLockRatio  // User sets the ratio at which price is locked on chart
+var float maxPrice = na
+var float minPrice = na
+var int   maxPriceBarIndex = na
+var int   minPriceBarIndex = na
+var bool range_processed = false  // Flag to ensure the calculation runs only once
+if not range_processed
+    if time >= trendlineFromDate and time <= trendlineToDate
+        if na(maxPrice) or high > maxPrice
+            maxPrice := high
+            maxPriceBarIndex := bar_index
+        if na(minPrice) or low < minPrice
+            minPrice := low
+            minPriceBarIndex := bar_index
+    if time > trendlineToDate
+        range_processed := true
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 3. Draw Downtrend Trendline (Highest to Lowest)
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    line.new(maxPriceBarIndex, maxPrice, minPriceBarIndex, minPrice, xloc=xloc.bar_index, color=color.white, width=2)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 4. Calculate trendline info 
+trendlineXRange = (maxPriceBarIndex - minPriceBarIndex)
+trendlineYRange = (maxPrice - minPrice)
+trendlineSlope = trendlineYRange / trendlineXRange 
+trendlineLength = math.sqrt(trendlineXRange * trendlineXRange + trendlineYRange * trendlineYRange)
+trendlineRadiusXComponent = math.sqrt(trendlineXRange * trendlineXRange + (trendlineYRange*inversePriceLockRatio) * (trendlineYRange*inversePriceLockRatio))
+trendlineRadiusYComponent = trendlineRadiusXComponent * priceLockRatio
+trendlineYRangeAdjustedForPriceScale = (maxPrice * inversePriceLockRatio - minPrice * inversePriceLockRatio)
+trendlineSlopeAdjustedForPriceScale = trendlineYRangeAdjustedForPriceScale / trendlineXRange
+trendlineAngle = math.atan(trendlineSlopeAdjustedForPriceScale) * 180 / math.pi  // Convert trendlineSlope to trendlineAngle in degrees  
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 5. Params for circle drawing
+// Custom type because cannot directly store array into array, have to do this way
+type CirclePoints  
+    array<float> points
+
+globalEnableCirclesArray = array.from(enableFirstCircle, enableSecondCircle, enableThirdCircle, enableFourthCircle, enableFifthCircle, enableSixthCircle, enableSeventhCircle, enableEighthCircle, enableNinthCircle, enableTenthCircle, enableEleventhCircle, enableTwelfthCircle, enableThirteenthCircle, enableFourteenthCircle, enableFifteenthCircle, enableSixteenthCircle, enableSeventeenthCircle, enableEighteenthCircle, enableNineteenthCircle, enableTwentiethCircle, enableTwentyFirstCircle, enableTwentySecondCircle, enableTwentyThirdCircle, enableTwentyFourthCircle, enableTwentyFifthCircle, enableTwentySixthCircle, enableTwentySeventhCircle, enableTwentyEighthCircle, enableTwentyNinthCircle, enableThirtiethCircle, enableThirtyFirstCircle, enableThirtySecondCircle, enableThirtyThirdCircle, enableThirtyFourthCircle, enableThirtyFifthCircle, enableThirtySixthCircle, enableThirtySeventhCircle, enableThirtyEighthCircle, enableThirtyNinthCircle, enableFortiethCircle, enableFortyFirstCircle, enableFortySecondCircle, enableFortyThirdCircle, enableFortyFourthCircle, enableFortyFifthCircle, enableFortySixthCircle, enableFortySeventhCircle, enableFortyEighthCircle, enableFortyNinthCircle, enableFiftiethCircle, enableFiftyFirstCircle, enableFiftySecondCircle, enableFiftyThirdCircle, enableFiftyFourthCircle, enableFiftyFifthCircle, enableFiftySixthCircle, enableFiftySeventhCircle, enableFiftyEighthCircle, enableFiftyNinthCircle, enableSixtiethCircle, enableSixtyFirstCircle)
+globalCircleFillColors = array.from(colorFirstCircleFill, colorSecondCircleFill, colorThirdCircleFill, colorFourthCircleFill, colorFifthCircleFill, colorSixthCircleFill, colorSeventhCircleFill, colorEighthCircleFill, colorNinthCircleFill, colorTenthCircleFill, colorEleventhCircleFill, colorTwelfthCircleFill, colorThirteenthCircleFill, colorFourteenthCircleFill, colorFifteenthCircleFill, colorSixteenthCircleFill, colorSeventeenthCircleFill, colorEighteenthCircleFill, colorNineteenthCircleFill, colorTwentiethCircleFill, colorTwentyFirstCircleFill, colorTwentySecondCircleFill, colorTwentyThirdCircleFill, colorTwentyFourthCircleFill, colorTwentyFifthCircleFill, colorTwentySixthCircleFill, colorTwentySeventhCircleFill, colorTwentyEighthCircleFill, colorTwentyNinthCircleFill, colorThirtiethCircleFill, colorThirtyFirstCircleFill, colorThirtySecondCircleFill, colorThirtyThirdCircleFill, colorThirtyFourthCircleFill, colorThirtyFifthCircleFill, colorThirtySixthCircleFill, colorThirtySeventhCircleFill, colorThirtyEighthCircleFill, colorThirtyNinthCircleFill, colorFortiethCircleFill, colorFortyFirstCircleFill, colorFortySecondCircleFill, colorFortyThirdCircleFill, colorFortyFourthCircleFill, colorFortyFifthCircleFill, colorFortySixthCircleFill, colorFortySeventhCircleFill, colorFortyEighthCircleFill, colorFortyNinthCircleFill, colorFiftiethCircleFill, colorFiftyFirstCircleFill, colorFiftySecondCircleFill, colorFiftyThirdCircleFill, colorFiftyFourthCircleFill, colorFiftyFifthCircleFill, colorFiftySixthCircleFill, colorFiftySeventhCircleFill, colorFiftyEighthCircleFill, colorFiftyNinthCircleFill, colorSixtiethCircleFill, colorSixtyFirstCircleFill)
+globalMidPointsXArray = array.new_float(92, 0.0)  // This is to store all the `circle1CenterX` type of stuff
+globalMidPointsYArray = array.new_float(92, 0.0)  // This is to store all the `circle1CenterY` type of stuff
+globalPetalTopLines = array.new_line(7)
+globalPetalLeftLines = array.new_line(7)
+globalPetalRightLines = array.new_line(7)
+globalNetherTopLines = array.new_line(19)
+globalNetherLeftLines = array.new_line(15)
+globalNetherRightLines = array.new_line(15)
+var array<CirclePoints> globalCirclePointsXArray = array.new<CirclePoints>(92, CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0)))
+var array<CirclePoints> globalCirclePointsYArray = array.new<CirclePoints>(92, CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0)))
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 9. Calculate points for the first circle
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Calculate circle center
+    circleCenterX = minPriceBarIndex  // Center X is at the bar index of minPrice
+    circleCenterY = minPrice          // Center Y is the minPrice value
+    array.set(globalMidPointsXArray, 0, circleCenterX)
+    array.set(globalMidPointsYArray, 0, circleCenterY)
+
+    // Step 2: Generate circle points
+    for n = 0 to numberOfAngles
+        angle = (n * angleIncrement) * math.pi / 180
+        array.set(array.get(globalCirclePointsXArray, 0).points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+        array.set(array.get(globalCirclePointsYArray, 0).points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 10. Calculate points for circles 2-7
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 5 times, handling circles 2,3,4,5,6,7
+    for i = 0 to 6
+        // Step 2: Define variables that will be updates for each circle iteration
+        arrayCirclePointsX = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        arrayCirclePointsY = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        float circleCenterX = na
+        float circleCenterY = na
+
+        // Step 3: Calculate circle center, and push to array
+        int iterationFactor = 240 + (60*i)
+        float angleRad = (trendlineAngle + iterationFactor) * math.pi / 180
+        circleCenterX := minPriceBarIndex + trendlineRadiusXComponent * math.cos(angleRad)
+        circleCenterY := minPrice + trendlineRadiusYComponent * math.sin(angleRad)
+        array.set(globalMidPointsXArray, i+1, circleCenterX)
+        array.set(globalMidPointsYArray, i+1, circleCenterY)
+
+        // Step 3: Generate circle points
+        for n = 0 to numberOfAngles
+            angle = (n * angleIncrement) * math.pi / 180
+            array.set(arrayCirclePointsX.points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+            array.set(arrayCirclePointsY.points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+        // Step 4: Push `arrayCirclePointsX` and `Y` variants to global storage
+        array.set(globalCirclePointsXArray, i+1, arrayCirclePointsX)
+        array.set(globalCirclePointsYArray, i+1, arrayCirclePointsY)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 11. Draw circles and midpoints (1,2,3,4,5,6,7)
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 5 times, handling circles 2,3,4,5,6,7
+    for i = 0 to 6
+        // Step 2: Derive the relevant variables
+        enableCircle = array.get(globalEnableCirclesArray, i)
+        circle_points_x = array.get(globalCirclePointsXArray, i).points
+        circle_points_y = array.get(globalCirclePointsYArray, i).points    
+        circleCenterX = array.get(globalMidPointsXArray, i)
+        circleCenterY = array.get(globalMidPointsYArray, i)
+
+        // Step 3: Optionally draw the sixth circle
+        if enableCircle and barstate.islast and (int(array.get(circle_points_x, 0)) <= bar_index or (int(array.get(circle_points_x, 0)) - bar_index) <= 500)
+            circle_points = array.new<chart.point>()
+            for n = 0 to numberOfAngles
+                array.push(circle_points, chart.point.from_index(int(array.get(circle_points_x, n)), array.get(circle_points_y, n)))
+            polyline.new(circle_points, curved=false, closed=true, fill_color=array.get(globalCircleFillColors, i), line_color=circleBorderColor, line_width=1)
+
+        // Step 4: Optionally draw the sixth circle midpoint
+        if enableMidPointsD1
+            label.new(int(circleCenterX), circleCenterY, str.tostring(i+1), textcolor=color.white, style=label.style_none, size=size.normal)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 12. Calculate points for circles 8-19
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 12 times, handling circles 8,9,10,11,12,13,14,15,16,17,18,19
+    for i = 0 to 11
+        // Step 2: Define variables that will be updates for each circle iteration
+        arrayCirclePointsX = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        arrayCirclePointsY = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        float circleCenterX = na
+        float circleCenterY = na
+
+        // Step 3: Calculate circle center, and push to array
+        float multiplicationFactor = i%2 == 0 ? (1 * math.sqrt(3)) : 2
+        int iterationFactor = 270 + (30*i)
+        float angleRad = (trendlineAngle + iterationFactor) * math.pi / 180
+        circleCenterX := minPriceBarIndex + (multiplicationFactor * trendlineRadiusXComponent) * math.cos(angleRad)
+        circleCenterY := minPrice + (multiplicationFactor * trendlineRadiusYComponent) * math.sin(angleRad)
+        array.set(globalMidPointsXArray, i+7, circleCenterX)
+        array.set(globalMidPointsYArray, i+7, circleCenterY)
+
+        // Step 3: Generate circle points
+        for n = 0 to numberOfAngles
+            angle = (n * angleIncrement) * math.pi / 180
+            array.set(arrayCirclePointsX.points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+            array.set(arrayCirclePointsY.points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+        // Step 4: Push `arrayCirclePointsX` and `Y` variants to global storage
+        array.set(globalCirclePointsXArray, i+7, arrayCirclePointsX)
+        array.set(globalCirclePointsYArray, i+7, arrayCirclePointsY)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 13. Draw circles and midpoints (8,9,10,11,12,13,14,15,16,17,18,19)
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 12 times, handling circles 8,9,10,11,12,13,14,15,16,17,18,19
+    for i = 6 to 18
+        // Step 2: Derive the relevant variables
+        enableCircle = array.get(globalEnableCirclesArray, i)
+        circle_points_x = array.get(globalCirclePointsXArray, i).points
+        circle_points_y = array.get(globalCirclePointsYArray, i).points    
+        circleCenterX = array.get(globalMidPointsXArray, i)
+        circleCenterY = array.get(globalMidPointsYArray, i)
+
+        // Step 3: Optionally draw the sixth circle
+        if enableCircle and barstate.islast and (int(array.get(circle_points_x, 0)) <= bar_index or (int(array.get(circle_points_x, 0)) - bar_index) <= 500)
+            circle_points = array.new<chart.point>()
+            for n = 0 to numberOfAngles
+                array.push(circle_points, chart.point.from_index(int(array.get(circle_points_x, n)), array.get(circle_points_y, n)))
+            polyline.new(circle_points, curved=false, closed=true, fill_color=array.get(globalCircleFillColors, i), line_color=circleBorderColor, line_width=1)
+
+        // Step 4: Optionally draw the sixth circle midpoint
+        if enableMidPointsD2
+            label.new(int(circleCenterX), circleCenterY, str.tostring(i+1), textcolor=color.white, style=label.style_none, size=size.normal)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 14. Calculate points for circles 20-37
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 18 times, handling circles 20,21,22,23,24,25...
+    for i = 19 to 36
+        // Step 2: Define variables that will be updates for each circle iteration
+        arrayCirclePointsX = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        arrayCirclePointsY = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        float circleCenterX = na
+        float circleCenterY = na
+ 
+        // Step 3: Find midpoint
+        int AIndex = na
+        int BIndex = na
+        if i == 19
+            AIndex := i-1 
+            BIndex := i-12
+        else if i > 19 and i < 22
+            AIndex := i-1 
+            BIndex := i-13
+        else if i >= 22 and i < 25
+            AIndex := i-1 
+            BIndex := i-14
+        else if i >= 25 and i < 28
+            AIndex := i-1 
+            BIndex := i-15
+        else if i >= 28 and i < 31
+            AIndex := i-1 
+            BIndex := i-16
+        else if i >= 31 and i < 34
+            AIndex := i-1 
+            BIndex := i-17
+        else if i >= 34 and i < 37
+            AIndex := i-1 
+            BIndex := i-18
+        circleACenterX = array.get(globalMidPointsXArray, AIndex)
+        circleACenterY = array.get(globalMidPointsYArray, AIndex)
+        circleBCenterX = array.get(globalMidPointsXArray, BIndex)
+        circleBCenterY = array.get(globalMidPointsYArray, BIndex)
+        float midX = (circleACenterX + circleBCenterX) / 2
+        float midY = (circleACenterY + circleBCenterY) / 2
+
+        // Step 4: Calculate length and adjusted angle
+        float dx = circleBCenterX - circleACenterX
+        float dy = circleBCenterY - circleACenterY
+        float dyAdjusted = (circleBCenterY * inversePriceLockRatio - circleACenterY * inversePriceLockRatio)
+        float height = trendlineRadiusXComponent * (math.sqrt(3) / 2)
+
+        // Step 5: Calculate both intersection points
+        float perpX = -dyAdjusted / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        float perpY = dx / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        perpY := perpY * priceLockRatio
+        float intersect1X = midX + perpX
+        float intersect1Y = midY + perpY
+        float intersect2X = midX - perpX
+        float intersect2Y = midY - perpY
+
+        // Step 6: Set circle center
+        circleCenterX := intersect2X
+        circleCenterY := intersect2Y
+        array.set(globalMidPointsXArray, i, circleCenterX)
+        array.set(globalMidPointsYArray, i, circleCenterY)
+
+        // Step 7: Generate circle points
+        for n = 0 to numberOfAngles
+            angle = (n * angleIncrement) * math.pi / 180
+            array.set(arrayCirclePointsX.points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+            array.set(arrayCirclePointsY.points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+        // Step 8: Push `arrayCirclePointsX` and `Y` variants to global storage
+        array.set(globalCirclePointsXArray, i, arrayCirclePointsX)
+        array.set(globalCirclePointsYArray, i, arrayCirclePointsY)
+
+ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 15. Draw circles and midpoints (20,21,22,23,24,25...)
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 12 times, handling circles 20,21,22,23,24,25...
+    for i = 19 to 36
+        // Step 2: Derive the relevant variables
+        enableCircle = array.get(globalEnableCirclesArray, i)
+        circle_points_x = array.get(globalCirclePointsXArray, i).points
+        circle_points_y = array.get(globalCirclePointsYArray, i).points    
+        circleCenterX = array.get(globalMidPointsXArray, i)
+        circleCenterY = array.get(globalMidPointsYArray, i)
+
+        // Step 3: Optionally draw the sixth circle
+        if enableCircle and barstate.islast and (int(array.get(circle_points_x, 0)) <= bar_index or (int(array.get(circle_points_x, 0)) - bar_index) <= 500)
+            circle_points = array.new<chart.point>()
+            for n = 0 to numberOfAngles
+                array.push(circle_points, chart.point.from_index(int(array.get(circle_points_x, n)), array.get(circle_points_y, n)))
+            polyline.new(circle_points, curved=false, closed=true, fill_color=array.get(globalCircleFillColors, i), line_color=circleBorderColor, line_width=1)
+
+        // Step 4: Optionally draw the sixth circle midpoint
+        if enableMidPointsD3
+            label.new(int(circleCenterX), circleCenterY, str.tostring(i+1), textcolor=color.white, style=label.style_none, size=size.normal)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 16. Calculate points for circles 38-61
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 18 times, handling circles 38,39,40,41,42,43...
+    for i = 37 to 61
+        // Step 2: Define variables that will be updates for each circle iteration
+        arrayCirclePointsX = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        arrayCirclePointsY = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        float circleCenterX = na
+        float circleCenterY = na
+ 
+        // Step 3: Find midpoint
+        int AIndex = na
+        int BIndex = na
+        if i == 37
+            AIndex := i-1
+            BIndex := i-18
+        else if i > 37 and i < 41
+            AIndex := i-1 
+            BIndex := i-19
+        else if i >= 41 and i < 45
+            AIndex := i-1 
+            BIndex := i-20
+        else if i >= 45 and i < 49
+            AIndex := i-1 
+            BIndex := i-21
+        else if i >= 49 and i < 53
+            AIndex := i-1 
+            BIndex := i-22
+        else if i >= 53 and i < 57
+            AIndex := i-1 
+            BIndex := i-23
+        else if i >= 57 and i < 61
+            AIndex := i-1 
+            BIndex := i-24
+        circleACenterX = array.get(globalMidPointsXArray, AIndex)
+        circleACenterY = array.get(globalMidPointsYArray, AIndex)
+        circleBCenterX = array.get(globalMidPointsXArray, BIndex)
+        circleBCenterY = array.get(globalMidPointsYArray, BIndex)
+        float midX = (circleACenterX + circleBCenterX) / 2
+        float midY = (circleACenterY + circleBCenterY) / 2
+
+        // Step 4: Calculate length and adjusted angle
+        float dx = circleBCenterX - circleACenterX
+        float dy = circleBCenterY - circleACenterY
+        float dyAdjusted = (circleBCenterY * inversePriceLockRatio - circleACenterY * inversePriceLockRatio)
+        float height = trendlineRadiusXComponent * (math.sqrt(3) / 2)
+
+        // Step 5: Calculate both intersection points
+        float perpX = -dyAdjusted / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        float perpY = dx / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        perpY := perpY * priceLockRatio
+        float intersect1X = midX + perpX
+        float intersect1Y = midY + perpY
+        float intersect2X = midX - perpX
+        float intersect2Y = midY - perpY
+
+        // Step 6: Set circle center
+        circleCenterX := intersect2X
+        circleCenterY := intersect2Y
+        array.set(globalMidPointsXArray, i, circleCenterX)
+        array.set(globalMidPointsYArray, i, circleCenterY)
+
+        // Step 7: Generate circle points
+        for n = 0 to numberOfAngles
+            angle = (n * angleIncrement) * math.pi / 180
+            array.set(arrayCirclePointsX.points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+            array.set(arrayCirclePointsY.points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+        // Step 8: Push `arrayCirclePointsX` and `Y` variants to global storage
+        array.set(globalCirclePointsXArray, i, arrayCirclePointsX)
+        array.set(globalCirclePointsYArray, i, arrayCirclePointsY)
+
+ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 17. Draw circles and midpoints 38,39,40,41,42,43...
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 12 times, handling circles 38,39,40,41,42,43...
+    for i = 37 to 60
+        // Step 2: Derive the relevant variables
+        enableCircle = array.get(globalEnableCirclesArray, i)
+        circle_points_x = array.get(globalCirclePointsXArray, i).points
+        circle_points_y = array.get(globalCirclePointsYArray, i).points    
+        circleCenterX = array.get(globalMidPointsXArray, i)
+        circleCenterY = array.get(globalMidPointsYArray, i)
+
+        // Step 3: Optionally draw the sixth circle
+        if enableCircle and barstate.islast and (int(array.get(circle_points_x, 0)) <= bar_index or (int(array.get(circle_points_x, 0)) - bar_index) <= 500)
+            circle_points = array.new<chart.point>()
+            for n = 0 to numberOfAngles
+                array.push(circle_points, chart.point.from_index(int(array.get(circle_points_x, n)), array.get(circle_points_y, n)))
+            polyline.new(circle_points, curved=false, closed=true, fill_color=array.get(globalCircleFillColors, i), line_color=circleBorderColor, line_width=1)
+
+        // Step 4: Optionally draw the sixth circle midpoint
+        if enableMidPointsD4
+            label.new(int(circleCenterX), circleCenterY, str.tostring(i+1), textcolor=color.white, style=label.style_none, size=size.normal)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// XX. Calculate points for circles 62 - 86
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 18 times, handling circles 62 - 86
+    for i = 61 to 91
+        // Step 2: Define variables that will be updates for each circle iteration
+        arrayCirclePointsX = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        arrayCirclePointsY = CirclePoints.new(array.new_float(numberOfCirclePoints, 0.0))
+        float circleCenterX = na
+        float circleCenterY = na
+ 
+        // Step 3: Find midpoint
+        int AIndex = na
+        int BIndex = na
+        if i == 61
+            AIndex := i-1
+            BIndex := i-24
+        else if i > 61 and i < 66
+            AIndex := i-1 
+            BIndex := i-25
+        else if i >= 66 and i < 71
+            AIndex := i-1 
+            BIndex := i-26
+        else if i >= 71 and i < 76
+            AIndex := i-1 
+            BIndex := i-27
+        else if i >= 76 and i < 81
+            AIndex := i-1 
+            BIndex := i-28
+        else if i >= 81 and i < 86
+            AIndex := i-1 
+            BIndex := i-29
+        else if i >= 86 and i < 91
+            AIndex := i-1 
+            BIndex := i-30
+        circleACenterX = array.get(globalMidPointsXArray, AIndex)
+        circleACenterY = array.get(globalMidPointsYArray, AIndex)
+        circleBCenterX = array.get(globalMidPointsXArray, BIndex)
+        circleBCenterY = array.get(globalMidPointsYArray, BIndex)
+        float midX = (circleACenterX + circleBCenterX) / 2
+        float midY = (circleACenterY + circleBCenterY) / 2
+
+        // Step 4: Calculate length and adjusted angle
+        float dx = circleBCenterX - circleACenterX
+        float dy = circleBCenterY - circleACenterY
+        float dyAdjusted = (circleBCenterY * inversePriceLockRatio - circleACenterY * inversePriceLockRatio)
+        float height = trendlineRadiusXComponent * (math.sqrt(3) / 2)
+
+        // Step 5: Calculate both intersection points
+        float perpX = -dyAdjusted / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        float perpY = dx / math.sqrt(dx * dx + dyAdjusted * dyAdjusted) * height
+        perpY := perpY * priceLockRatio
+        float intersect1X = midX + perpX
+        float intersect1Y = midY + perpY
+        float intersect2X = midX - perpX
+        float intersect2Y = midY - perpY
+
+        // Step 6: Set circle center
+        circleCenterX := intersect2X
+        circleCenterY := intersect2Y
+        array.set(globalMidPointsXArray, i, circleCenterX)
+        array.set(globalMidPointsYArray, i, circleCenterY)
+
+        // Step 7: Generate circle points
+        for n = 0 to numberOfAngles
+            angle = (n * angleIncrement) * math.pi / 180
+            array.set(arrayCirclePointsX.points, n, circleCenterX + trendlineRadiusXComponent * math.cos(angle))
+            array.set(arrayCirclePointsY.points, n, circleCenterY + trendlineRadiusYComponent * math.sin(angle))
+
+        // Step 8: Push `arrayCirclePointsX` and `Y` variants to global storage
+        array.set(globalCirclePointsXArray, i, arrayCirclePointsX)
+        array.set(globalCirclePointsYArray, i, arrayCirclePointsY)
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// XX. Draw midpoints 62 and beyond
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast)
+    // Step 1: Iterate 12 times, handling circles 8,9,10,11,12,13,14,15,16,17,18,19
+    for i = 61 to 91
+        // Step 2: Derive the relevant variables
+        enableCircle = array.get(globalEnableCirclesArray, i)
+        circle_points_x = array.get(globalCirclePointsXArray, i).points
+        circle_points_y = array.get(globalCirclePointsYArray, i).points    
+        circleCenterX = array.get(globalMidPointsXArray, i)
+        circleCenterY = array.get(globalMidPointsYArray, i)
+
+        // Step 3: Optionally draw the circle midpoint
+        if enableMidPointsD5
+            label.new(int(circleCenterX), circleCenterY, str.tostring(i+1), textcolor=color.white, style=label.style_none, size=size.normal)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 18. If enabled, draw middle petal dividers relative to top
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enablePetalDividersTop
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 45)), y1=array.get(globalMidPointsYArray, 45), x2=int(array.get(globalMidPointsXArray, 39)), y2=array.get(globalMidPointsYArray, 39), color=petalDividersColorTop, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 46)), y1=array.get(globalMidPointsYArray, 46), x2=int(array.get(globalMidPointsXArray, 38)), y2=array.get(globalMidPointsYArray, 38), color=petalDividersColorTop, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 47)), y1=array.get(globalMidPointsYArray, 47), x2=int(array.get(globalMidPointsXArray, 37)), y2=array.get(globalMidPointsYArray, 37), color=petalDividersColorTop, width=1 )
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 48)), y1=array.get(globalMidPointsYArray, 48), x2=int(array.get(globalMidPointsXArray, 60)), y2=array.get(globalMidPointsYArray, 60), color=petalDividersColorTop, width=1 )
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 49)), y1=array.get(globalMidPointsYArray, 49), x2=int(array.get(globalMidPointsXArray, 59)), y2=array.get(globalMidPointsYArray, 59), color=petalDividersColorTop, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 50)), y1=array.get(globalMidPointsYArray, 50), x2=int(array.get(globalMidPointsXArray, 58)), y2=array.get(globalMidPointsYArray, 58), color=petalDividersColorTop, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 51)), y1=array.get(globalMidPointsYArray, 51), x2=int(array.get(globalMidPointsXArray, 57)), y2=array.get(globalMidPointsYArray, 57), color=petalDividersColorTop, width=1 )
+
+    array.set(globalPetalTopLines, 0, line1)
+    array.set(globalPetalTopLines, 1, line2)
+    array.set(globalPetalTopLines, 2, line3)
+    array.set(globalPetalTopLines, 3, line4)
+    array.set(globalPetalTopLines, 4, line5)
+    array.set(globalPetalTopLines, 5, line6)
+    array.set(globalPetalTopLines, 6, line7)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 19. If enabled, draw middle petal dividers relative to left
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enablePetalDividersLeft
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 55)), y1=array.get(globalMidPointsYArray, 55), x2=int(array.get(globalMidPointsXArray, 37)), y2=array.get(globalMidPointsYArray, 37), color=petalDividersColorTop, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 54)), y1=array.get(globalMidPointsYArray, 54), x2=int(array.get(globalMidPointsXArray, 38)), y2=array.get(globalMidPointsYArray, 38), color=petalDividersColorTop, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 53)), y1=array.get(globalMidPointsYArray, 53), x2=int(array.get(globalMidPointsXArray, 39)), y2=array.get(globalMidPointsYArray, 39), color=petalDividersColorTop, width=1 )
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 52)), y1=array.get(globalMidPointsYArray, 52), x2=int(array.get(globalMidPointsXArray, 40)), y2=array.get(globalMidPointsYArray, 40), color=petalDividersColorTop, width=1 )
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 51)), y1=array.get(globalMidPointsYArray, 51), x2=int(array.get(globalMidPointsXArray, 41)), y2=array.get(globalMidPointsYArray, 41), color=petalDividersColorTop, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 50)), y1=array.get(globalMidPointsYArray, 50), x2=int(array.get(globalMidPointsXArray, 42)), y2=array.get(globalMidPointsYArray, 42), color=petalDividersColorTop, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 49)), y1=array.get(globalMidPointsYArray, 49), x2=int(array.get(globalMidPointsXArray, 43)), y2=array.get(globalMidPointsYArray, 43), color=petalDividersColorTop, width=1 )
+
+    array.set(globalPetalLeftLines, 0, line1)
+    array.set(globalPetalLeftLines, 1, line2)
+    array.set(globalPetalLeftLines, 2, line3)
+    array.set(globalPetalLeftLines, 3, line4)
+    array.set(globalPetalLeftLines, 4, line5)
+    array.set(globalPetalLeftLines, 5, line6)
+    array.set(globalPetalLeftLines, 6, line7)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 20. If enabled, draw middle petal dividers relative to right
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enablePetalDividersRight
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 41)), y1=array.get(globalMidPointsYArray, 41), x2=int(array.get(globalMidPointsXArray, 59)), y2=array.get(globalMidPointsYArray, 59), color=petalDividersColorTop, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 42)), y1=array.get(globalMidPointsYArray, 42), x2=int(array.get(globalMidPointsXArray, 58)), y2=array.get(globalMidPointsYArray, 58), color=petalDividersColorTop, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 43)), y1=array.get(globalMidPointsYArray, 43), x2=int(array.get(globalMidPointsXArray, 57)), y2=array.get(globalMidPointsYArray, 57), color=petalDividersColorTop, width=1 )
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 44)), y1=array.get(globalMidPointsYArray, 44), x2=int(array.get(globalMidPointsXArray, 56)), y2=array.get(globalMidPointsYArray, 56), color=petalDividersColorTop, width=1 )
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 45)), y1=array.get(globalMidPointsYArray, 45), x2=int(array.get(globalMidPointsXArray, 55)), y2=array.get(globalMidPointsYArray, 55), color=petalDividersColorTop, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 46)), y1=array.get(globalMidPointsYArray, 46), x2=int(array.get(globalMidPointsXArray, 54)), y2=array.get(globalMidPointsYArray, 54), color=petalDividersColorTop, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 47)), y1=array.get(globalMidPointsYArray, 47), x2=int(array.get(globalMidPointsXArray, 53)), y2=array.get(globalMidPointsYArray, 53), color=petalDividersColorTop, width=1 )
+   
+    array.set(globalPetalRightLines, 0, line1)
+    array.set(globalPetalRightLines, 1, line2)
+    array.set(globalPetalRightLines, 2, line3)
+    array.set(globalPetalRightLines, 3, line4)
+    array.set(globalPetalRightLines, 4, line5)
+    array.set(globalPetalRightLines, 5, line6)
+    array.set(globalPetalRightLines, 6, line7)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 21. If enabled, draw middle lines through all nether regions relative to top
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enableNetherDividersTop
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 71)), y1=array.get(globalMidPointsYArray, 71), x2=int(array.get(globalMidPointsXArray, 69)), y2=array.get(globalMidPointsYArray, 69), color=netherDividersColorTop, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 72)), y1=array.get(globalMidPointsYArray, 72), x2=int(array.get(globalMidPointsXArray, 68)), y2=array.get(globalMidPointsYArray, 68), color=netherDividersColorTop, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 73)), y1=array.get(globalMidPointsYArray, 73), x2=int(array.get(globalMidPointsXArray, 67)), y2=array.get(globalMidPointsYArray, 67), color=netherDividersColorTop, width=1 )
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 74)), y1=array.get(globalMidPointsYArray, 74), x2=int(array.get(globalMidPointsXArray, 66)), y2=array.get(globalMidPointsYArray, 66), color=netherDividersColorTop, width=1 )
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 75)), y1=array.get(globalMidPointsYArray, 75), x2=int(array.get(globalMidPointsXArray, 65)), y2=array.get(globalMidPointsYArray, 65), color=netherDividersColorTop, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 48)), y1=array.get(globalMidPointsYArray, 48), x2=int(array.get(globalMidPointsXArray, 40)), y2=array.get(globalMidPointsYArray, 40), color=netherDividersColorTop, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 76)), y1=array.get(globalMidPointsYArray, 76), x2=int(array.get(globalMidPointsXArray, 64)), y2=array.get(globalMidPointsYArray, 64), color=netherDividersColorTop, width=1 )
+    line8 = line.new(x1=int(array.get(globalMidPointsXArray, 49)), y1=array.get(globalMidPointsYArray, 49), x2=int(array.get(globalMidPointsXArray, 39)), y2=array.get(globalMidPointsYArray, 39), color=netherDividersColorTop, width=1 )
+    line9 = line.new(x1=int(array.get(globalMidPointsXArray, 77)), y1=array.get(globalMidPointsYArray, 77), x2=int(array.get(globalMidPointsXArray, 63)), y2=array.get(globalMidPointsYArray, 63), color=netherDividersColorTop, width=1 )
+    line10 = line.new(x1=int(array.get(globalMidPointsXArray, 50)), y1=array.get(globalMidPointsYArray, 50), x2=int(array.get(globalMidPointsXArray, 38)), y2=array.get(globalMidPointsYArray, 38), color=netherDividersColorTop, width=1 )
+    line11 = line.new(x1=int(array.get(globalMidPointsXArray, 78)), y1=array.get(globalMidPointsYArray, 78), x2=int(array.get(globalMidPointsXArray, 62)), y2=array.get(globalMidPointsYArray, 62), color=netherDividersColorTop, width=1 )
+    line12 = line.new(x1=int(array.get(globalMidPointsXArray, 51)), y1=array.get(globalMidPointsYArray, 51), x2=int(array.get(globalMidPointsXArray, 37)), y2=array.get(globalMidPointsYArray, 37), color=netherDividersColorTop, width=1 )
+    line13 = line.new(x1=int(array.get(globalMidPointsXArray, 79)), y1=array.get(globalMidPointsYArray, 79), x2=int(array.get(globalMidPointsXArray, 61)), y2=array.get(globalMidPointsYArray, 61), color=netherDividersColorTop, width=1 )
+    line14 = line.new(x1=int(array.get(globalMidPointsXArray, 52)), y1=array.get(globalMidPointsYArray, 52), x2=int(array.get(globalMidPointsXArray, 60)), y2=array.get(globalMidPointsYArray, 60), color=netherDividersColorTop, width=1 )
+    line15 = line.new(x1=int(array.get(globalMidPointsXArray, 80)), y1=array.get(globalMidPointsYArray, 80), x2=int(array.get(globalMidPointsXArray, 90)), y2=array.get(globalMidPointsYArray, 90), color=netherDividersColorTop, width=1 )
+    line16 = line.new(x1=int(array.get(globalMidPointsXArray, 81)), y1=array.get(globalMidPointsYArray, 81), x2=int(array.get(globalMidPointsXArray, 89)), y2=array.get(globalMidPointsYArray, 89), color=netherDividersColorTop, width=1 )
+    line17 = line.new(x1=int(array.get(globalMidPointsXArray, 82)), y1=array.get(globalMidPointsYArray, 82), x2=int(array.get(globalMidPointsXArray, 88)), y2=array.get(globalMidPointsYArray, 88), color=netherDividersColorTop, width=1 )
+    line18 = line.new(x1=int(array.get(globalMidPointsXArray, 83)), y1=array.get(globalMidPointsYArray, 83), x2=int(array.get(globalMidPointsXArray, 87)), y2=array.get(globalMidPointsYArray, 87), color=netherDividersColorTop, width=1 )
+    line19 = line.new(x1=int(array.get(globalMidPointsXArray, 84)), y1=array.get(globalMidPointsYArray, 84), x2=int(array.get(globalMidPointsXArray, 86)), y2=array.get(globalMidPointsYArray, 86), color=netherDividersColorTop, width=1 )
+
+    array.set(globalNetherTopLines, 0, line1)
+    array.set(globalNetherTopLines, 1, line2)
+    array.set(globalNetherTopLines, 2, line3)
+    array.set(globalNetherTopLines, 3, line4)
+    array.set(globalNetherTopLines, 4, line5)
+    array.set(globalNetherTopLines, 5, line6)
+    array.set(globalNetherTopLines, 6, line7)
+    array.set(globalNetherTopLines, 7, line8)
+    array.set(globalNetherTopLines, 8, line9)
+    array.set(globalNetherTopLines, 9, line10)
+    array.set(globalNetherTopLines, 10, line11)
+    array.set(globalNetherTopLines, 11, line12)
+    array.set(globalNetherTopLines, 12, line13)
+    array.set(globalNetherTopLines, 13, line14)
+    array.set(globalNetherTopLines, 14, line15)
+    array.set(globalNetherTopLines, 15, line16)
+    array.set(globalNetherTopLines, 16, line17)
+    array.set(globalNetherTopLines, 17, line18)
+    array.set(globalNetherTopLines, 18, line19)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 22. If enabled, draw middle lines through all nether regions relative to left
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enableNetherDividersLeft
+
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 41)), y1=array.get(globalMidPointsYArray, 41), x2=int(array.get(globalMidPointsXArray, 39)), y2=array.get(globalMidPointsYArray, 39), color=netherDividersColorLeft, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 42)), y1=array.get(globalMidPointsYArray, 42), x2=int(array.get(globalMidPointsXArray, 38)), y2=array.get(globalMidPointsYArray, 38), color=netherDividersColorLeft, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 43)), y1=array.get(globalMidPointsYArray, 43), x2=int(array.get(globalMidPointsXArray, 37)), y2=array.get(globalMidPointsYArray, 37), color=netherDividersColorLeft, width=1 )
+    
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 44)), y1=array.get(globalMidPointsYArray, 44), x2=int(array.get(globalMidPointsXArray, 60)), y2=array.get(globalMidPointsYArray, 60), color=netherDividersColorLeft, width=1 )
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 71)), y1=array.get(globalMidPointsYArray, 71), x2=int(array.get(globalMidPointsXArray, 89)), y2=array.get(globalMidPointsYArray, 89), color=netherDividersColorLeft, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 45)), y1=array.get(globalMidPointsYArray, 45), x2=int(array.get(globalMidPointsXArray, 59)), y2=array.get(globalMidPointsYArray, 59), color=netherDividersColorLeft, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 72)), y1=array.get(globalMidPointsYArray, 72), x2=int(array.get(globalMidPointsXArray, 88)), y2=array.get(globalMidPointsYArray, 88), color=netherDividersColorLeft, width=1 )
+    line8 = line.new(x1=int(array.get(globalMidPointsXArray, 46)), y1=array.get(globalMidPointsYArray, 46), x2=int(array.get(globalMidPointsXArray, 58)), y2=array.get(globalMidPointsYArray, 58), color=netherDividersColorLeft, width=1 )
+    line9 = line.new(x1=int(array.get(globalMidPointsXArray, 73)), y1=array.get(globalMidPointsYArray, 73), x2=int(array.get(globalMidPointsXArray, 87)), y2=array.get(globalMidPointsYArray, 87), color=netherDividersColorLeft, width=1 )
+    line10 = line.new(x1=int(array.get(globalMidPointsXArray, 47)), y1=array.get(globalMidPointsYArray, 47), x2=int(array.get(globalMidPointsXArray, 57)), y2=array.get(globalMidPointsYArray, 57), color=netherDividersColorLeft, width=1 )
+    line11 = line.new(x1=int(array.get(globalMidPointsXArray, 74)), y1=array.get(globalMidPointsYArray, 74), x2=int(array.get(globalMidPointsXArray, 86)), y2=array.get(globalMidPointsYArray, 86), color=netherDividersColorLeft, width=1 )
+
+    line12 = line.new(x1=int(array.get(globalMidPointsXArray, 48)), y1=array.get(globalMidPointsYArray, 48), x2=int(array.get(globalMidPointsXArray, 56)), y2=array.get(globalMidPointsYArray, 56), color=netherDividersColorLeft, width=1 )
+    line13 = line.new(x1=int(array.get(globalMidPointsXArray, 49)), y1=array.get(globalMidPointsYArray, 49), x2=int(array.get(globalMidPointsXArray, 55)), y2=array.get(globalMidPointsYArray, 55), color=netherDividersColorLeft, width=1 )
+    line14 = line.new(x1=int(array.get(globalMidPointsXArray, 50)), y1=array.get(globalMidPointsYArray, 50), x2=int(array.get(globalMidPointsXArray, 54)), y2=array.get(globalMidPointsYArray, 54), color=netherDividersColorLeft, width=1 )
+    line15 = line.new(x1=int(array.get(globalMidPointsXArray, 51)), y1=array.get(globalMidPointsYArray, 51), x2=int(array.get(globalMidPointsXArray, 53)), y2=array.get(globalMidPointsYArray, 53), color=netherDividersColorLeft, width=1 )
+
+
+    array.set(globalNetherLeftLines, 0, line1)
+    array.set(globalNetherLeftLines, 1, line2)
+    array.set(globalNetherLeftLines, 2, line3)
+    array.set(globalNetherLeftLines, 3, line4)
+    array.set(globalNetherLeftLines, 4, line5)
+    array.set(globalNetherLeftLines, 5, line6)
+    array.set(globalNetherLeftLines, 6, line7)
+    array.set(globalNetherLeftLines, 7, line8)
+    array.set(globalNetherLeftLines, 8, line9)
+    array.set(globalNetherLeftLines, 9, line10)
+    array.set(globalNetherLeftLines, 10, line11)
+    array.set(globalNetherLeftLines, 11, line12)
+    array.set(globalNetherLeftLines, 12, line13)
+    array.set(globalNetherLeftLines, 13, line14)
+    array.set(globalNetherLeftLines, 14, line15)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 23. If enabled, draw middle lines through all nether regions relative to right
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enableNetherDividersRight
+
+    line1 = line.new(x1=int(array.get(globalMidPointsXArray, 47)), y1=array.get(globalMidPointsYArray, 47), x2=int(array.get(globalMidPointsXArray, 49)), y2=array.get(globalMidPointsYArray, 49), color=netherDividersColorRight, width=1 )
+    line2 = line.new(x1=int(array.get(globalMidPointsXArray, 46)), y1=array.get(globalMidPointsYArray, 46), x2=int(array.get(globalMidPointsXArray, 50)), y2=array.get(globalMidPointsYArray, 50), color=netherDividersColorRight, width=1 )
+    line3 = line.new(x1=int(array.get(globalMidPointsXArray, 45)), y1=array.get(globalMidPointsYArray, 45), x2=int(array.get(globalMidPointsXArray, 51)), y2=array.get(globalMidPointsYArray, 51), color=netherDividersColorRight, width=1 )
+    line4 = line.new(x1=int(array.get(globalMidPointsXArray, 44)), y1=array.get(globalMidPointsYArray, 44), x2=int(array.get(globalMidPointsXArray, 52)), y2=array.get(globalMidPointsYArray, 52), color=netherDividersColorRight, width=1 )
+    
+    line5 = line.new(x1=int(array.get(globalMidPointsXArray, 69)), y1=array.get(globalMidPointsYArray, 69), x2=int(array.get(globalMidPointsXArray, 81)), y2=array.get(globalMidPointsYArray, 81), color=netherDividersColorRight, width=1 )
+    line6 = line.new(x1=int(array.get(globalMidPointsXArray, 43)), y1=array.get(globalMidPointsYArray, 43), x2=int(array.get(globalMidPointsXArray, 53)), y2=array.get(globalMidPointsYArray, 53), color=netherDividersColorRight, width=1 )
+    line7 = line.new(x1=int(array.get(globalMidPointsXArray, 68)), y1=array.get(globalMidPointsYArray, 68), x2=int(array.get(globalMidPointsXArray, 82)), y2=array.get(globalMidPointsYArray, 82), color=netherDividersColorRight, width=1 )
+    line8 = line.new(x1=int(array.get(globalMidPointsXArray, 42)), y1=array.get(globalMidPointsYArray, 42), x2=int(array.get(globalMidPointsXArray, 54)), y2=array.get(globalMidPointsYArray, 54), color=netherDividersColorRight, width=1 )
+    line9 = line.new(x1=int(array.get(globalMidPointsXArray, 67)), y1=array.get(globalMidPointsYArray, 67), x2=int(array.get(globalMidPointsXArray, 83)), y2=array.get(globalMidPointsYArray, 83), color=netherDividersColorRight, width=1 )
+    line10 = line.new(x1=int(array.get(globalMidPointsXArray, 41)), y1=array.get(globalMidPointsYArray, 41), x2=int(array.get(globalMidPointsXArray, 55)), y2=array.get(globalMidPointsYArray, 55), color=netherDividersColorRight, width=1 )
+    line11 = line.new(x1=int(array.get(globalMidPointsXArray, 66)), y1=array.get(globalMidPointsYArray, 66), x2=int(array.get(globalMidPointsXArray, 84)), y2=array.get(globalMidPointsYArray, 84), color=netherDividersColorRight, width=1 )
+
+    line12 = line.new(x1=int(array.get(globalMidPointsXArray, 40)), y1=array.get(globalMidPointsYArray, 40), x2=int(array.get(globalMidPointsXArray, 56)), y2=array.get(globalMidPointsYArray, 56), color=netherDividersColorRight, width=1 )
+    line13 = line.new(x1=int(array.get(globalMidPointsXArray, 39)), y1=array.get(globalMidPointsYArray, 39), x2=int(array.get(globalMidPointsXArray, 57)), y2=array.get(globalMidPointsYArray, 57), color=netherDividersColorRight, width=1 )
+    line14 = line.new(x1=int(array.get(globalMidPointsXArray, 38)), y1=array.get(globalMidPointsYArray, 38), x2=int(array.get(globalMidPointsXArray, 58)), y2=array.get(globalMidPointsYArray, 58), color=netherDividersColorRight, width=1 )
+    line15 = line.new(x1=int(array.get(globalMidPointsXArray, 37)), y1=array.get(globalMidPointsYArray, 37), x2=int(array.get(globalMidPointsXArray, 59)), y2=array.get(globalMidPointsYArray, 59), color=netherDividersColorRight, width=1 )
+
+
+    array.set(globalNetherRightLines, 0, line1)
+    array.set(globalNetherRightLines, 1, line2)
+    array.set(globalNetherRightLines, 2, line3)
+    array.set(globalNetherRightLines, 3, line4)
+    array.set(globalNetherRightLines, 4, line5)
+    array.set(globalNetherRightLines, 5, line6)
+    array.set(globalNetherRightLines, 6, line7)
+    array.set(globalNetherRightLines, 7, line8)
+    array.set(globalNetherRightLines, 8, line9)
+    array.set(globalNetherRightLines, 9, line10)
+    array.set(globalNetherRightLines, 10, line11)
+    array.set(globalNetherRightLines, 11, line12)
+    array.set(globalNetherRightLines, 12, line13)
+    array.set(globalNetherRightLines, 13, line14)
+    array.set(globalNetherRightLines, 14, line15)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 24. Top - Nether Price Finder 
+if barstate.islast and enableNetherTopPriceFinder
+    chosenLine = array.get(globalNetherTopLines, netherTopInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enableNetherTopDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=netherTopColor, width=netherTopDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=netherTopColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=netherTopColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=netherTopColor, textcolor=color.black)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 25. Left - Nether Price Finder 
+if barstate.islast and enableNetherLeftPriceFinder
+    chosenLine = array.get(globalNetherLeftLines, netherLeftInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+ 
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enableNetherLeftDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=netherLeftColor, width=netherLeftDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=netherLeftColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=netherLeftColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=netherLeftColor, textcolor=color.black)
+
+ 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 26. Right - Nether Price Finder 
+if barstate.islast and enableNetherRightPriceFinder
+    chosenLine = array.get(globalNetherRightLines, netherRightInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+ 
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enableNetherRightDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=netherRightColor, width=netherRightDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=netherRightColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=netherRightColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=netherRightColor, textcolor=color.black)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 27. Top - Petal Price Finder 
+if barstate.islast and enablePetalTopPriceFinder
+    chosenLine = array.get(globalPetalTopLines, petalTopInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enablePetalTopDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=petalTopColor, width=petalTopDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=petalTopColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=petalTopColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=petalTopColor, textcolor=color.black)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 28. Left - Petal Price Finder 
+if barstate.islast and enablePetalLeftPriceFinder
+    chosenLine = array.get(globalPetalLeftLines, petalLeftInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enablePetalLeftDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=petalLeftColor, width=petalLeftDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=petalLeftColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=petalLeftColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=petalLeftColor, textcolor=color.black)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 29. Right - Petal Price Finder 
+if barstate.islast and enablePetalRightPriceFinder
+    chosenLine = array.get(globalPetalRightLines, petalRightInput-1)
+    if not na(chosenLine)
+        // Step 1: Get line coordinates
+        lineX1 = line.get_x1(chosenLine)
+        lineY1 = line.get_y1(chosenLine)
+        lineX2 = line.get_x2(chosenLine)
+        lineY2 = line.get_y2(chosenLine)
+
+        // Step 2: Optionally, draw the line
+        if not na(lineX1) and not na(lineY1) and not na(lineX2) and not na(lineY2) and enablePetalRightDebugLine
+            line.new(x1=lineX1, y1=lineY1, x2=lineX2, y2=lineY2, color=petalRightColor, width=petalRightDebugWidth)
+
+        // Step 3: Get price at the current bar index using line.get_price
+        linePrice = line.get_price(chosenLine, bar_index)
+
+        // Step 4: Display the price as a label if valid
+        if not na(linePrice)
+            label.new(bar_index, linePrice, "Price: " + str.tostring(linePrice), color=petalRightColor, textcolor=color.black)
+        else
+            label.new(bar_index, high, "Price retrieval failed", color=petalRightColor, textcolor=color.black)
+    else
+        label.new(bar_index, high, "Chosen line is NA", color=petalRightColor, textcolor=color.black)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 30. Circle Price Finder 1 - Debugging Intersections with Points Marked
+var float circle1int1 = na
+var float circle1int2 = na
+if barstate.islast and enableCircle1PriceFinder
+    // Step 1: Retrieve Circle Data
+    chosenCircleMidPointX = array.get(globalMidPointsXArray, circle1Input - 1)
+    chosenCircleMidPointY = array.get(globalMidPointsYArray, circle1Input - 1)
+    chosenCirclePointsX = array.get(globalCirclePointsXArray, circle1Input - 1).points
+    chosenCirclePointsY = array.get(globalCirclePointsYArray, circle1Input - 1).points
+
+    // Step 2: Build Circle Points
+    circle_points = array.new<chart.point>()
+    for n = 0 to numberOfAngles - 1
+        pointX = int(array.get(chosenCirclePointsX, n))
+        pointY = array.get(chosenCirclePointsY, n)
+        array.push(circle_points, chart.point.from_index(pointX, pointY))
+
+    // Step 3: Draw the Circle
+    polyline.new(circle_points, curved=false, closed=true, fill_color=color.rgb(0, 0, 0, 100), line_color=circle1Color, line_width=circle1Width)
+
+    // Step 4: Draw the Vertical Line for Debugging
+    if enableVerticalLine
+        line.new(x1=bar_index, y1=chosenCircleMidPointY - 1000, x2=bar_index, y2=chosenCircleMidPointY + 1000, color=verticalLineColor, width=verticalLineWidth)
+
+    // Step 5: Find Intersection of Vertical Line with Polyline
+    for n = 0 to array.size(circle_points) - 2
+        start_point = array.get(circle_points, n)
+        end_point = array.get(circle_points, n + 1)
+        start_x = start_point.index
+        start_y = start_point.price
+        end_x = end_point.index
+        end_y = end_point.price
+
+        if (start_x <= bar_index and bar_index < end_x) or (end_x <= bar_index and bar_index < start_x)
+            slope = (end_y - start_y) / (end_x - start_x)
+            y_intercept = start_y + slope * (bar_index - start_x)
+            if na(circle1int1)
+                circle1int1 := y_intercept
+            else
+                circle1int2 := y_intercept
+            label.new(bar_index, y_intercept, "" + str.tostring(y_intercept), color=color.yellow, textcolor=color.white, style = label.style_none)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 31. Circle Price Finder 2 - Debugging Intersections with Points Marked
+var float circle2int1 = na
+var float circle2int2 = na
+if barstate.islast and enableCircle2PriceFinder
+    // Step 1: Retrieve Circle Data
+    chosenCircleMidPointX = array.get(globalMidPointsXArray, circle2Input - 1)
+    chosenCircleMidPointY = array.get(globalMidPointsYArray, circle2Input - 1)
+    chosenCirclePointsX = array.get(globalCirclePointsXArray, circle2Input - 1).points
+    chosenCirclePointsY = array.get(globalCirclePointsYArray, circle2Input - 1).points
+
+    // Step 2: Build Circle Points
+    circle_points = array.new<chart.point>()
+    for n = 0 to numberOfAngles - 1
+        pointX = int(array.get(chosenCirclePointsX, n))
+        pointY = array.get(chosenCirclePointsY, n)
+        array.push(circle_points, chart.point.from_index(pointX, pointY))
+
+    // Step 3: Draw the Circle
+    polyline.new(circle_points, curved=false, closed=true, fill_color=color.rgb(0, 0, 0, 100), line_color=circle2Color, line_width=circle2Width)
+
+    // Step 4: Draw the Vertical Line for Debugging
+    if enableVerticalLine
+        line.new(x1=bar_index, y1=chosenCircleMidPointY - 1000, x2=bar_index, y2=chosenCircleMidPointY + 1000, color=verticalLineColor, width=verticalLineWidth)
+
+    // Step 5: Find Intersection of Vertical Line with Polyline
+    for n = 0 to array.size(circle_points) - 2
+        start_point = array.get(circle_points, n)
+        end_point = array.get(circle_points, n + 1)
+        start_x = start_point.index
+        start_y = start_point.price
+        end_x = end_point.index
+        end_y = end_point.price
+
+        if (start_x <= bar_index and bar_index < end_x) or (end_x <= bar_index and bar_index < start_x)
+            slope = (end_y - start_y) / (end_x - start_x)
+            y_intercept = start_y + slope * (bar_index - start_x)
+            if na(circle2int1)
+                circle2int1 := y_intercept
+            else
+                circle2int2 := y_intercept
+            label.new(bar_index, y_intercept, "" + str.tostring(y_intercept), color=color.yellow, textcolor=color.white, style = label.style_none)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 32. Create trendline table and populate it
+if not na(maxPrice) and not na(minPrice) and (time > trendlineToDate or barstate.islast) and enableTable
+    var table infoTable = table.new(position.top_right, 1, 1, frame_color=color.new(color.black, 90), frame_width=1)
+    table.cell(infoTable, 0, 0, "Trendline Info:\nX1: " + str.tostring(minPriceBarIndex) + " X2: " + str.tostring(maxPriceBarIndex) + "\nY1: " + str.tostring(minPrice) + " Y2: " + str.tostring(maxPrice) + "\nSlope: " + str.tostring(trendlineSlope) + "\nAngle: " + str.tostring(trendlineAngle) + "\nX-Range: " + str.tostring(trendlineXRange) + "\nY-Range: " + str.tostring(trendlineYRange) + "\nLength: " + str.tostring(trendlineLength) + "\nRadius-X: " + str.tostring(trendlineRadiusXComponent) + "\nRadius-Y: " + str.tostring(trendlineRadiusYComponent) + "\n\nFlower of Life:" + "\nCircle" + str.tostring(circle1Input) + "Int1: " + str.tostring(circle1int1) + " \nCircle" + str.tostring(circle1Input) + "Int2: " + str.tostring(circle1int2) + "\nCircle" + str.tostring(circle2Input) + "Int1: " + str.tostring(circle2int1) + "\nCircle" + str.tostring(circle2Input) + "Int2: " + str.tostring(circle2int2), text_color=color.white, text_size=size.small)
